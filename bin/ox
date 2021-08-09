@@ -50,7 +50,7 @@ case "$cmd" in
     ;;
   *)
     command_file="$install_location/lib/$cmd"
-    if [ ! -x "$command_file" ]; then
+    if [ ! -f "$command_file" ] || [ ! -x "$command_file" ]; then
       usage
     fi
 
