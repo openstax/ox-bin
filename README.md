@@ -19,19 +19,19 @@ ox update
 # re-build the search client based on configs stored in the npm package
 # the resulting package is re-published with an automatically incremented
 # version based on the swagger api version
-build-swagger-client @openstax/open-search-client
+ox build-swagger-client @openstax/open-search-client
 
 # build the search client for the first time or with a new swagger endpoint 
 # the resulting package is published with an automatically generated verison
 # based on the swagger api version
-build-swagger-client @openstax/open-search-client --api_host openstax.org --swagger_path /open-search/api/v0/swagger
+ox build-swagger-client @openstax/open-search-client --api_host openstax.org --swagger_path /open-search/api/v0/swagger
 
 # run without arguments for help and additional options
-build-swagger-client
+ox build-swagger-client
 ```
 
 ### set_aws_creds
 ```
 # load aws credentials using an internally versioned clone of openstax/aws-access
-. set_aws_creds -r sandbox:unified-deployment -i assume-role
+. ox set_aws_creds -r sandbox:unified-deployment -i assume-role
 ```

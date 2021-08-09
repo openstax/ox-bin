@@ -17,7 +17,10 @@ HELP
   exit 1
 }
 
-case "$1" in
+cmd="$1"
+shift
+
+case "$cmd" in
   register)
     "$install_location"/bin/ox deregister
     for file in "$install_location"/bin/*; do
@@ -46,6 +49,11 @@ case "$1" in
     "$install_location"/bin/ox register
     ;;
   *)
-    usage
+    command_file="$install_location/lib/$cmd"
+    if [ ! -x "$command_file" ]; then
+      usage
+    fi
+
+    "$command_file" "$@"
     ;;
 esac
