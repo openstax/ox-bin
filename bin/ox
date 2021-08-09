@@ -4,16 +4,30 @@
 install_location="$HOME/.ox-bin"
 
 usage() {
+  tab=$'\t'
+
   cat <<HELP
 usage:
 ox [command]
 
 Commands:
-  register    adds ox-bin PATH in shell profile
-  deregister  removes referenecs to ox-bin from host
-  uninstall   deregister and remove all files
-  update      self-update ox-bin
 HELP
+
+  commands=$(cat <<HELP
+  help${tab}prints this
+  register${tab}adds links for bin/ files
+  deregister${tab}removes links for bin/ files
+  uninstall${tab}deregister and remove all files
+  update${tab}self-update ox-bin
+HELP
+)
+  for file in "$install_location"/lib/*; do
+    filename=$(basename "$file")
+    description=$(grep -C 1 "### $filename" "$install_location/README.md" | tail -n1)
+    commands+=$'\n  '$filename$tab$description
+  done
+
+  column -t -s"$tab" <(echo "$commands")
   exit 1
 }
 
@@ -21,6 +35,9 @@ cmd="$1"
 shift
 
 case "$cmd" in
+  help)
+    usage
+    ;;
   register)
     "$install_location"/bin/ox deregister
     for file in "$install_location"/bin/*; do
@@ -43,7 +60,7 @@ case "$cmd" in
     # todo - error messaging
     cd "$install_location" || exit 1;
     git pull
-    # todo - this will generate an error if user 
+    # todo - this will generate an error if user
     # doesn't have access to repo, handle gracefully
     git submodule update --init --recursive
     "$install_location"/bin/ox register
