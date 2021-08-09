@@ -16,6 +16,7 @@ ox update
 ## scripts
 
 ### build-swagger-client
+builds and publishes npm modules for swagger api clients
 ```
 # re-build the search client based on configs stored in the npm package
 # the resulting package is re-published with an automatically incremented
@@ -32,6 +33,7 @@ ox build-swagger-client
 ```
 
 ### set_aws_creds
+sets environemnt variables for aws cli authentication
 ```
 # load aws credentials using an internally versioned clone of openstax/aws-access
 . ox set_aws_creds -r sandbox:unified-deployment -i assume-role
@@ -40,3 +42,12 @@ ox build-swagger-client
 ## To make a new script
 
 add a file in `/lib` and call it with `ox my-file-name`
+
+add a section to this README, the first line after the `### my-file-name` heading is used
+in the usage block in `ox help` eg:
+```
+### my-file-name
+my useful but short description
+
+other useful information
+```
