@@ -35,3 +35,7 @@ ox build-swagger-client
 # load aws credentials using an internally versioned clone of openstax/aws-access
 . ox set_aws_creds -r sandbox:unified-deployment -i assume-role
 ```
+
+## To make a new script
+
+add a file in `/lib` and call it with `ox my-file-name`
