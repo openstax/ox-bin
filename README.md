@@ -4,9 +4,8 @@ a collection of random scripts for openstax developers
 to install this repo for the first time run:
 ```
 curl https://raw.githubusercontent.com/openstax/ox-bin/main/remote-install.bash | bash
-
-which will checkout this repo to ~/.ox-bin and add a symlink on your path to the `ox` command
 ```
+which will checkout this repo to ~/.ox-bin and add a symlink on your path to the `ox` command
 
 ## udpate
 to get updates to this repo after installing it run:
