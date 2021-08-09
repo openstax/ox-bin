@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+# todo - make this better by reading current script location
+install_location="$HOME/.ox-bin"
+
+usage() {
+  cat <<HELP
+usage:
+ox [command]
+
+Commands:
+  register    adds ox-bin PATH in shell profile
+  deregister  removes referenecs to ox-bin from host
+  uninstall   deregister and remove all files
+  update      self-update ox-bin
+HELP
+  exit 1
+}
+
+case "$1" in
+  register)
+    "$install_location"/bin/ox deregister
+    for file in "$install_location"/bin/*; do
+      filename=$(basename "$file")
+      ln -s "$file" "/usr/local/bin/$filename"
+    done
+    ;;
+  deregister)
+    for file in "$install_location"/bin/*; do
+      filename=$(basename "$file")
+      rm -f "/usr/local/bin/$filename"
+    done
+    ;;
+  uninstall)
+    "$install_location"/bin/ox deregister
+    rm -r ~/.ox-bin
+    ;;
+  update)
+    # todo - error messaging
+    cd "$install_location" || exit 1;
+    git pull
+    # todo - this will generate an error if user 
+    # doesn't have access to repo, handle gracefully
+    git submodule update --init --recursive
+    ;;
+  *)
+    usage
+    ;;
+esac

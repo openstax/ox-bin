@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+set -e; if [ -n "$DEBUG" ]; then set -x; fi
+
+if [ -z "$(command -v docker)" ]; then
+  echo "docker is required to build swagger" > /dev/stderr;
+  exit 1;
+fi
+if [ -z "$(command -v yarn)" ]; then
+  echo "yarn is required to build swagger" > /dev/stderr;
+  exit 1;
+fi
+
+usage() {
+  cat <<HELP
+usage:
+build-swagger-client [package-name] [options]
+
+builds a swagger client from a remote swagger.json and publishes the generated
+code as a npm module.
+
+passed package name is npm package name (eg: @openstax/open-search-client). if it doesn't exist
+it'll be created. you must be logged into npm already for publish to work.
+
+--api_host and --swagger_path are required for a new client, but once it is published it'll read the
+previous values out of the existing client and you only have to specify if you want to change
+them.
+
+**note** this script only supports typescript clients right now
+
+Options:
+  --api_host      the api host without a path or protocol, eg: openstax.org
+                  will be added as "host" to swagger.json
+  --swagger_path  the path at the api_host that the swagger.json can be found at
+  --secure        pass "false" to use http connections to api (default: "true")
+  --test          pass "true" to skip publish (default: "false")
+HELP
+  exit 1
+}
+
+temp_dir=$(mktemp -d -t ci-XXXXXXXXXX)
+log_file="$temp_dir/build-log.txt"
+options_file_name="build-options.json"
+options_file="$temp_dir/dist/$options_file_name"
+
+cd "$temp_dir"
+echo "(swagger) using build directory: $temp_dir" > /dev/stderr
+mkdir dist
+
+yarn add --silent yargs 2>> "$log_file" >> "$log_file"
+
+NODE_PATH=node_modules/ node <(echo "process.stdout.write(JSON.stringify(require('yargs').argv))") "$@" > "$options_file"
+
+package_name=$(docker run --rm -i stedolan/jq -r '._[0] // ""' < "$options_file")
+
+if [ -z "$package_name" ]; then
+  usage
+fi
+
+yarn add --silent "$package_name" 2>> "$log_file" >> "$log_file" || (cat > /dev/stderr <<< "$package_name does not exist, press enter to continue with creation" && read -r)
+
+api_host=$(docker run --rm -i stedolan/jq -r '.api_host // ""' < "$options_file")
+swagger_path=$(docker run --rm -i stedolan/jq -r '.swagger_path // ""' < "$options_file")
+secure=$(docker run --rm -i stedolan/jq -r '.secure // "true"' < "$options_file")
+skip_publish=$(docker run --rm -i stedolan/jq -r '.test // "false"' < "$options_file")
+protocol=$(test "$secure" == "true" && echo "https" || echo "http")
+
+previous_options_file="node_modules/$package_name/$options_file_name"
+
+if [ -f "$previous_options_file" ] && [ -z "$api_host" ]; then
+  api_host=$(docker run --rm -i stedolan/jq -r '.api_host // ""' < "$previous_options_file")
+fi
+if [ -f "$previous_options_file" ] && [ -z "$swagger_path" ]; then
+  swagger_path=$(docker run --rm -i stedolan/jq -r '.swagger_path // ""' < "$previous_options_file")
+fi
+if [ -d "node_modules/$package_name" ] && [ ! -f "$previous_options_file" ]; then
+  echo "(swagger $package_name) package $package_name exists but doesn't define an options file, options are required" > /dev/stderr
+fi
+if [ -z "$api_host" ] || [ -z "$swagger_path" ]; then
+  usage
+fi
+
+echo "(swagger $package_name) using swagger from $protocol://$api_host$swagger_path" > /dev/stderr
+
+# sometimes the swagger files don't define a host, so make sure its in there for where we got it from
+curl -s "$protocol://$api_host$swagger_path" \
+  | docker run --rm -i stedolan/jq --arg host "$api_host" --arg protocol "$protocol" '. + {host: $host, schemes: [$protocol]}' \
+  > "$temp_dir/swagger.json"
+
+echo "(swagger $package_name) building swagger" > /dev/stderr;
+
+docker run --rm -v "$temp_dir:/shared" openapitools/openapi-generator-cli:v5.2.0 generate \
+  --additional-properties=typescriptThreePlus=true \
+  -i /shared/swagger.json \
+  -g typescript-fetch \
+  -o /shared/src >> "$log_file"
+
+echo "(swagger $package_name) fixing file permissions" > /dev/stderr;
+
+docker run --rm -v "$temp_dir:/shared" openapitools/openapi-generator-cli:v5.2.0 bash -c \
+  'chown -R "$(stat -c "%u:%g" /shared)" /shared'
+
+echo "(swagger $package_name) building typescript" > /dev/stderr;
+
+yarn add --silent typescript@4.2 semver 2>> "$log_file" >> "$log_file"
+yarn run --silent tsc --module commonjs --target es6 --lib es2015,dom --outDir dist --declaration src/index.ts 2>> "$log_file"
+
+echo "(swagger $package_name) configuring package" > /dev/stderr;
+
+api_version=$(docker run --rm -i stedolan/jq -r .info.version < swagger.json)
+npm_version=$(yarn --silent info "$package_name" version 2> /dev/null)
+
+echo "api_version: $api_version" >> "$log_file"
+echo "npm_version: $npm_version" >> "$log_file"
+
+if [[ -n "$npm_version" ]] && yarn run --silent semver -r ">$api_version-build.0" "$npm_version" 2> /dev/null > /dev/null; then
+  version=$(yarn run --silent semver "$npm_version" -i prerelease 2> /dev/null)
+  echo "api version is satisfied by npm version, incrementing build: $version" >> "$log_file"
+else
+  version="$api_version-build.1"
+  echo "api version is newer than npm version, bumping package version to: $version" >> "$log_file"
+fi
+
+  cat > dist/package.json <<packagejson
+{
+  "name": "$package_name",
+  "description": "automatically generated swagger client",
+  "version": "$version",
+  "main": "index.js",
+  "typings": "index.d.ts",
+  "license": "MIT"
+}
+packagejson
+
+echo "(swagger $package_name) publishing" > /dev/stderr;
+
+if [ "$skip_publish" == "true" ]; then
+  echo "(swagger $package_name) TEST SKIPPING yarn publish dist --non-interactive" > /dev/stderr;
+else
+  yarn publish dist --non-interactive 2>> "$log_file" >> "$log_file"
+fi
+
+echo "(swagger $package_name) done version: $version" > /dev/stderr;
