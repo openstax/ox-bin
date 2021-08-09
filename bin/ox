@@ -48,6 +48,9 @@ case "$cmd" in
     git submodule update --init --recursive
     "$install_location"/bin/ox register
     ;;
+  "")
+    usage
+    ;;
   *)
     command_file="$install_location/lib/$cmd"
     if [ ! -x "$command_file" ]; then
