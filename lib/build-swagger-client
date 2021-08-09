@@ -44,6 +44,13 @@ options_file="$temp_dir/dist/$options_file_name"
 
 cd "$temp_dir"
 echo "(swagger) using build directory: $temp_dir" > /dev/stderr
+
+err_report() {
+    echo "An error has been encountered, check out the logs: $log_file"
+}
+
+trap 'err_report' ERR
+
 mkdir dist
 
 yarn add --silent yargs 2>> "$log_file" >> "$log_file"
@@ -134,9 +141,9 @@ packagejson
 echo "(swagger $package_name) publishing" > /dev/stderr;
 
 if [ "$skip_publish" == "true" ]; then
-  echo "(swagger $package_name) TEST SKIPPING yarn publish dist --non-interactive" > /dev/stderr;
+  echo "(swagger $package_name) TEST SKIPPING yarn publish dist --access public --non-interactive" > /dev/stderr;
 else
-  yarn publish dist --non-interactive 2>> "$log_file" >> "$log_file"
+  yarn publish dist --access public --non-interactive 2>> "$log_file" >> "$log_file"
 fi
 
 echo "(swagger $package_name) done version: $version" > /dev/stderr;
