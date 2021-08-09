@@ -33,7 +33,7 @@ case "$1" in
     ;;
   uninstall)
     "$install_location"/bin/ox deregister
-    rm -r ~/.ox-bin
+    rm -r "$install_location" 
     ;;
   update)
     # todo - error messaging
