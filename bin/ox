@@ -33,15 +33,17 @@ case "$1" in
     ;;
   uninstall)
     "$install_location"/bin/ox deregister
-    rm -r "$install_location" 
+    rm -fr "$install_location"
     ;;
   update)
+    "$install_location"/bin/ox deregister
     # todo - error messaging
     cd "$install_location" || exit 1;
     git pull
     # todo - this will generate an error if user 
     # doesn't have access to repo, handle gracefully
     git submodule update --init --recursive
+    "$install_location"/bin/ox register
     ;;
   *)
     usage

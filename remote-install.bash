@@ -7,5 +7,5 @@ if [ -z "$(command -v git)" ]; then
   exit 1;
 fi
 
-git clone $repo_url ~/.ox-bin
+git clone --recursive $repo_url ~/.ox-bin
 ~/.ox-bin/bin/ox register
