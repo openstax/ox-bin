@@ -1,0 +1,3 @@
+[submodule "submodules/aws-access"]
+	path = submodules/aws-access
+	url = git@github.com:openstax/aws-access.git
