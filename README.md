@@ -32,6 +32,9 @@ ox build-swagger-client @openstax/open-search-client --api_host openstax.org --s
 ox build-swagger-client
 ```
 
+## environments
+these scripts export stuff to your shell, and need to be sourced with either `.` or `source`
+
 ### set_aws_creds
 sets environemnt variables for aws cli authentication
 ```
