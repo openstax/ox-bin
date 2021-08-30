@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# https://stackoverflow.com/a/28776166
+([[ -n $ZSH_EVAL_CONTEXT && $ZSH_EVAL_CONTEXT =~ :file$ ]] ||
+ [[ -n $BASH_VERSION ]] && (return 0 2>/dev/null)) && sourced=true || sourced=false
+
 # todo - make this better by reading current script location
 install_location="$HOME/.ox-bin"
 
@@ -9,6 +13,7 @@ usage() {
   cat <<HELP
 usage:
 ox [command]
+. ox [environment]
 
 Commands:
 HELP
@@ -26,8 +31,22 @@ HELP
     description=$(grep -C 1 "### $filename" "$install_location/README.md" | tail -n1)
     commands+=$'\n  '$filename$tab$description
   done
-
+  
   column -t -s"$tab" <(echo "$commands")
+    
+  cat <<HELP
+
+Environments:
+HELP
+  environments=""
+
+  for file in "$install_location"/env/*; do
+    filename=$(basename "$file")
+    description=$(grep -C 1 "### $filename" "$install_location/README.md" | tail -n1)
+    environments+=$'\n  '$filename$tab$description
+  done
+
+  column -t -s"$tab" <(echo "$environments")
   exit 1
 }
 
@@ -65,15 +84,16 @@ case "$cmd" in
     git submodule update --init --recursive
     "$install_location"/bin/ox register
     ;;
-  set_aws_creds)
-    source "$install_location/lib/set_aws_creds"
-    ;;
   *)
+    source_file="$install_location/env/$cmd"
     command_file="$install_location/lib/$cmd"
-    if [ ! -f "$command_file" ] || [ ! -x "$command_file" ]; then
+    if [ "$sourced" == "false" ] && [ -f "$command_file" ] && [ -x "$command_file" ]; then
+      "$command_file" "$@"
+    elif [ "$sourced" == "true" ] && [ -f "$source_file" ] && [ -x "$source_file" ]; then
+      # shellcheck disable=SC1090
+      source "$source_file"
+    else
       usage
     fi
-
-    "$command_file" "$@"
     ;;
 esac
