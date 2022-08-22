@@ -1,0 +1,46 @@
+#!/usr/bin/env ruby
+
+# frozen_string_literal: true
+
+# usage:
+#  giteffort app/services/*.rb lib/task.rake
+
+require 'bundler/inline'
+require 'open3'
+
+gemfile do
+  source "https://rubygems.org"
+  gem 'slop', '4.8.2'
+  gem 'byebug'
+end
+
+def run(command)
+  # %x{"#{command}"}
+  Open3.popen3(command) do |stdin, stdout, stderr, thread|
+    stdout.read.chomp
+ end
+end
+
+file_patterns = ARGV.map{|pattern| "#{Dir.getwd}/#{pattern}"}
+
+commits = []
+
+Dir.glob(file_patterns).each do |file|
+  commits.push(run("git log --follow --find-copies-harder --format=format:%H -- #{file}").split("\n"))
+end
+
+commits.flatten!
+commits.uniq!
+
+work = {}
+
+commits.each do |commit|
+  timestamp = `git show -s --format=%ci #{commit}`.chomp
+  author = `git show -s --format='%ae' #{commit}`.chomp
+
+  work[author] ||= []
+  work[author].push(timestamp)
+  work[author].sort!
+end
+
+pp work
