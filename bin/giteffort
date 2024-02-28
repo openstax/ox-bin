@@ -7,6 +7,7 @@
 
 require 'bundler/inline'
 require 'open3'
+require 'date'
 
 gemfile do
   source "https://rubygems.org"
@@ -41,6 +42,12 @@ commits.each do |commit|
   work[author] ||= []
   work[author].push(timestamp)
   work[author].sort!
+end
+
+work.each do |author, dates|
+  work[author] = dates.map{|date| DateTime.parse(date).to_date}
+  work[author].uniq!
+  work[author] = work[author].map{|date| date.strftime("%-m/%-d/%y")}.join(', ')
 end
 
 pp work
